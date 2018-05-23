@@ -1,2 +1,2 @@
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-  com.ingenico.epayments.shared.jpa.eclipselink.autoconfigure.JpaEclipseLinkAutoConfiguration
+  com.gm.caas.autoconfigurer.CaaSAutoConfigurer

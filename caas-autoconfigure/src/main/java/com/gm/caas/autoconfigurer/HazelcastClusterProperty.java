@@ -15,24 +15,37 @@
  * unauthorized copies of this software or other copyrighted materials may
  * result in disciplinary or legal action as the circumstances may warrant.
  */
-package com.ingenico.epayments.acquiring.terminalservice.configuration;
+package com.gm.caas.autoconfigurer;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+
 /**
  * Cluster properties
  */
 @Component
 @EnableConfigurationProperties
-@ConfigurationProperties(prefix = "terminal-service-app.cluster")
+@ConfigurationProperties(prefix = "com.gm.caas")
+/**
+ * NOTE: cache name, properties will added as:
+ * com.gm.cass.cache.config.cache.names[0]=myCache
+ * com.gm.cass.cache.config.cache.myCache.type=Near
+ * com.gm.cass.cache.config.cache.myCache.cacheStore=FullQualifiedCacheName
+ * com.gm.cass.cache.config.cache.myCache.eviction=LRU
+ *
+ */
 @Data
-public class TerminalServiceAppHazelcastClusterProperty {
+public class HazelcastClusterProperty {
     private String members;
 
     private String managementCenterUrl;
 
     private int maxThreads;
+
+    private List<String> names;
+
 }

@@ -15,40 +15,40 @@
  * unauthorized copies of this software or other copyrighted materials may
  * result in disciplinary or legal action as the circumstances may warrant.
  */
-package com.ingenico.epayments.acquiring.terminalservice.configuration;
+package com.gm.caas.autoconfigurer;
 
 import com.hazelcast.config.Config;
 import com.hazelcast.config.ExecutorConfig;
 import com.hazelcast.config.ManagementCenterConfig;
 import com.hazelcast.config.MapConfig;
-import com.ingenico.epayments.acquiring.terminalservice.model.PortableFactoryAware;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.ListableBeanFactory;
 
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import static com.hazelcast.config.EvictionPolicy.NONE;
 import static com.hazelcast.spi.ExecutionService.OFFLOADABLE_EXECUTOR;
-import static com.ingenico.epayments.acquiring.terminalservice.configuration.TerminalServiceSpringConfiguration.*;
-import static com.ingenico.epayments.acquiring.terminalservice.constant.TerminalServiceAppConstants.TERMINAL_SERVICE_APP_CACHE;
-import static com.ingenico.epayments.acquiring.terminalservice.constant.TerminalServiceAppConstants.TERMINAL_SERVICE_APP_PROPERTIES_CACHE;
 import static java.lang.Runtime.getRuntime;
 import static java.net.NetworkInterface.getByInetAddress;
-import static org.apache.commons.lang3.StringUtils.join;
+import static java.util.Collections.singletonList;
+import static org.springframework.util.StringUtils.*;
 
 /**
  * Hazelcast builder: A simple DSL style Hazelcast configuration builder.
  */
 @Slf4j
-public class TerminalServiceHazelcastConfigBuilder {
+public class HazelcastConfigBuilder {
 
-    private static TerminalServiceHazelcastConfigBuilder builder;
+    public static final String GROUP_NAME = "Hazelcast-CaaS";
+    public static final String CLUSTER_MEMBERS = "com.gm.shared.members";
+    public static final String DEFAULT_CACHE = "CaaSDefaultCache";
+    public static final String DEFAULT_MEMBER = "127.0.0.1:5701";
+
+    private static HazelcastConfigBuilder builder;
     private String commaSepratedClusterMembers = "";
     private String managementCenterUrl;
     private List<String> members;
@@ -56,12 +56,12 @@ public class TerminalServiceHazelcastConfigBuilder {
     private int maxThreads;
 
 
-    private TerminalServiceHazelcastConfigBuilder() {
+    private HazelcastConfigBuilder() {
 
     }
 
-    public static TerminalServiceHazelcastConfigBuilder newHazelcastConfigBuilderWith(TerminalServiceAppHazelcastClusterProperty prop) {
-        builder = new TerminalServiceHazelcastConfigBuilder();
+    public static HazelcastConfigBuilder newHazelcastConfigBuilderWith(HazelcastClusterProperty prop) {
+        builder = new HazelcastConfigBuilder();
         builder.commaSepratedClusterMembers = prop.getMembers();
         builder.managementCenterUrl = prop.getManagementCenterUrl();
         builder.maxThreads = prop.getMaxThreads();
@@ -70,7 +70,7 @@ public class TerminalServiceHazelcastConfigBuilder {
 
     private static boolean checkAddressLocal(String address) {
         if (address.indexOf(':') >= 0) {
-            address = StringUtils.split(address, ':')[0];
+            address = split(address, ":")[0];
         }
         try {
             InetAddress inetAddress = InetAddress.getByName(address);
@@ -88,26 +88,26 @@ public class TerminalServiceHazelcastConfigBuilder {
         }
     }
 
-    public TerminalServiceHazelcastConfigBuilder withBeanFactory(ListableBeanFactory listableBeanFactory) {
+    public HazelcastConfigBuilder withBeanFactory(ListableBeanFactory listableBeanFactory) {
         this.listableBeanFactory = listableBeanFactory;
 
         return this;
     }
 
-    private TerminalServiceHazelcastConfigBuilder buildeClusterMemberName() {
+    private HazelcastConfigBuilder buildeClusterMemberName() {
 
 
         if (commaSepratedClusterMembers == null) {
-            members = Collections.singletonList(DEFAULT_MEMBER);
-            log.info("Property " + CLUSTER_MEMBERS + " not specified, using default: " + join(members, ", "));
+            members = singletonList(DEFAULT_MEMBER);
+            log.info("Property " + CLUSTER_MEMBERS + " not specified, using default: " + collectionToCommaDelimitedString(members));
         } else {
-            String[] tokens = StringUtils.split(commaSepratedClusterMembers, ',');
+            String[] tokens = commaDelimitedListToStringArray(commaSepratedClusterMembers);
             List<String> members = new ArrayList<>(tokens.length);
             for (String token : tokens) {
                 members.add(token.trim());
             }
             this.members = members;
-            log.info(CLUSTER_MEMBERS + " is set to: " + join(this.members, ", "));
+            log.info(CLUSTER_MEMBERS + " is set to: " + collectionToCommaDelimitedString(members));
         }
 
         return builder;
@@ -122,7 +122,7 @@ public class TerminalServiceHazelcastConfigBuilder {
         hazelcastConfig.setProperty("hazelcast.client.statistics.period.seconds", "5");
         hazelcastConfig.setInstanceName("terminal-service-app-cache-instance");
         hazelcastConfig.addMapConfig(new MapConfig()
-                .setName(TERMINAL_SERVICE_APP_CACHE)
+                .setName(DEFAULT_CACHE)
                 .setEvictionPolicy(NONE)
                 .setStatisticsEnabled(true));
 
@@ -132,11 +132,11 @@ public class TerminalServiceHazelcastConfigBuilder {
                 .setPoolSize(getRuntime().availableProcessors() * 2)
                 .setQueueCapacity(maxThreads));
 
-        hazelcastConfig.addMapConfig(new MapConfig()
-                .setName(TERMINAL_SERVICE_APP_PROPERTIES_CACHE)
-                .setStatisticsEnabled(true)
-                .setEvictionPolicy(NONE)
-                .setStatisticsEnabled(true));
+//        hazelcastConfig.addMapConfig(new MapConfig()
+//                .setName(TERMINAL_SERVICE_APP_PROPERTIES_CACHE)
+//                .setStatisticsEnabled(true)
+//                .setEvictionPolicy(NONE)
+//                .setStatisticsEnabled(true));
 
         if (!org.springframework.util.StringUtils.isEmpty(managementCenterUrl)) {
             ManagementCenterConfig manCenterCfg = new ManagementCenterConfig();
@@ -146,7 +146,7 @@ public class TerminalServiceHazelcastConfigBuilder {
             hazelcastConfig.setManagementCenterConfig(manCenterCfg);
         }
 
-        handlePortableObjectConfiguration(hazelcastConfig);
+//        handlePortableObjectConfiguration(hazelcastConfig);
 
 
         hazelcastConfig.getGroupConfig().setName(GROUP_NAME);
@@ -156,7 +156,7 @@ public class TerminalServiceHazelcastConfigBuilder {
         for (String member : members) {
             if (checkAddressLocal(member)) {
                 log.info("Using " + member + " as local address");
-                String[] address = StringUtils.split(member, ':');
+                String[] address = commaDelimitedListToStringArray(member);
                 if (address.length > 0) {
                     hazelcastConfig.getNetworkConfig().getInterfaces().addInterface(address[0]);
                 }
@@ -174,10 +174,11 @@ public class TerminalServiceHazelcastConfigBuilder {
         return hazelcastConfig;
     }
 
-    private void handlePortableObjectConfiguration(Config hazelcastConfig) {
-        for (PortableFactoryAware portableFactoryAware : listableBeanFactory.getBeansOfType(PortableFactoryAware.class).values()) {
-
-            hazelcastConfig.getSerializationConfig().addPortableFactory(portableFactoryAware.getPortableFactoryId(), portableFactoryAware);
-        }
-    }
+    // TODO find generic way to handling portable object with factory blah
+//    private void handlePortableObjectConfiguration(Config hazelcastConfig) {
+//        for (PortableFactoryAware portableFactoryAware : listableBeanFactory.getBeansOfType(PortableFactoryAware.class).values()) {
+//
+//            hazelcastConfig.getSerializationConfig().addPortableFactory(portableFactoryAware.getPortableFactoryId(), portableFactoryAware);
+//        }
+//    }
 }
