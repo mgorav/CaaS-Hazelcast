@@ -1,0 +1,2 @@
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+  com.ingenico.epayments.shared.jpa.eclipselink.autoconfigure.JpaEclipseLinkAutoConfiguration
